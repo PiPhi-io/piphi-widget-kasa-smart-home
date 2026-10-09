@@ -3,7 +3,7 @@
   "identity": {
     "publisher_id": "io.piphi",
     "package_id": "kasa-smart-home",
-    "version": "0.1.15"
+    "version": "0.1.16"
   },
   "name": "Kasa Smart Home",
   "description": "Responsive controls, environmental readings, and energy insights for TP-Link Kasa devices.",
@@ -30,12 +30,12 @@
         "evidence": {
           "runtime": ["core-profile:sandbox-host-v1/runtime"],
           "persistence": ["core-profile:sandbox-host-v1/persistence"],
-          "binding": ["repo:tests/test_experience_package.py::test_bindings_match_runtime_capabilities_and_are_device_scoped"],
-          "states": ["repo:tests/test_experience_package.py::test_sandbox_widget_has_accessible_responsive_loading_and_error_paths"],
-          "commands": ["repo:tests/test_experience_package.py::test_browser_helpers_cover_empty_snapshot_points_and_power_commands"],
-          "responsive": ["repo:tests/test_experience_package.py::test_sandbox_widget_has_accessible_responsive_loading_and_error_paths"],
-          "themes": ["repo:tests/test_experience_package.py::test_themes_are_bounded_and_core_typography_remains_authoritative"],
-          "accessibility": ["repo:tests/test_experience_package.py::test_sandbox_widget_has_accessible_responsive_loading_and_error_paths"],
+          "binding": ["repo:test/package.test.mjs"],
+          "states": ["repo:test/widget.test.mjs"],
+          "commands": ["repo:test/widget.test.mjs"],
+          "responsive": ["repo:src/widget.ts"],
+          "themes": ["repo:themes/kasa.css", "repo:themes/quiet.css"],
+          "accessibility": ["repo:src/widget.ts"],
           "save-reload": ["core-profile:sandbox-host-v1/save-reload"],
           "performance": ["core-profile:sandbox-host-v1/performance"]
         }
@@ -74,20 +74,21 @@
       "id": "energy-monitor",
       "name": "Kasa Energy Monitor",
       "description": "Current power and recent energy consumption from a Kasa device.",
-      "runtime": "declarative",
+      "runtime": "sandboxed_bundle",
+      "entry": "assets/kasa-metrics-widget.mjs",
       "certification": {
         "schema_version": "1",
         "verified_gates": ["runtime", "persistence", "binding", "states", "responsive", "themes", "accessibility", "save-reload", "performance"],
         "evidence": {
-          "runtime": ["core-profile:declarative-v1/runtime"],
-          "persistence": ["core-profile:declarative-v1/persistence"],
-          "binding": ["repo:tests/test_experience_package.py::test_bindings_match_runtime_capabilities_and_are_device_scoped"],
-          "states": ["core-profile:declarative-v1/states"],
-          "responsive": ["core-profile:declarative-v1/responsive"],
-          "themes": ["core-profile:declarative-v1/themes"],
-          "accessibility": ["core-profile:declarative-v1/accessibility"],
-          "save-reload": ["core-profile:declarative-v1/save-reload"],
-          "performance": ["core-profile:declarative-v1/performance"]
+          "runtime": ["core-profile:sandbox-host-v1/runtime"],
+          "persistence": ["core-profile:sandbox-host-v1/persistence"],
+          "binding": ["repo:test/package.test.mjs"],
+          "states": ["repo:test/widget.test.mjs"],
+          "responsive": ["repo:src/metrics-widget.ts"],
+          "themes": ["repo:themes/kasa.css", "repo:themes/quiet.css"],
+          "accessibility": ["repo:src/metrics-widget.ts"],
+          "save-reload": ["core-profile:sandbox-host-v1/save-reload"],
+          "performance": ["core-profile:sandbox-host-v1/performance"]
         }
       },
       "themes": [
@@ -110,16 +111,6 @@
         {"id": "today", "label": "Today", "required": false, "binding_modes": ["read"], "value_kinds": ["numeric"], "capability_requirements": ["energy_today"], "compatible_integration_ids": ["tp-link-kasa-local-api"], "data_delivery": {"mode": "stream_preferred", "stale_after_seconds": 120}},
         {"id": "month", "label": "This month", "required": false, "binding_modes": ["read"], "value_kinds": ["numeric"], "capability_requirements": ["energy_this_month"], "compatible_integration_ids": ["tp-link-kasa-local-api"], "data_delivery": {"mode": "stream_preferred", "stale_after_seconds": 120}}
       ],
-      "recipe": {
-        "schema_version": "1",
-        "layout": "grid",
-        "columns": 2,
-        "items": [
-          {"type": "metric", "slot_id": "live-power", "label": "Right now", "format": "number", "domain": "power", "emphasis": "compact", "show_freshness": true, "action": {"type": "details", "label": "View power history"}},
-          {"type": "metric", "slot_id": "today", "label": "Today", "format": "number", "domain": "energy", "emphasis": "compact", "show_freshness": true, "action": {"type": "details", "label": "View today's energy history"}},
-          {"type": "metric", "slot_id": "month", "label": "This month", "format": "number", "domain": "energy", "emphasis": "compact", "show_freshness": true, "action": {"type": "details", "label": "View monthly energy history"}}
-        ]
-      },
       "default_column_span": 4,
       "default_row_span": 2
     },
@@ -134,12 +125,12 @@
         "evidence": {
           "runtime": ["core-profile:sandbox-host-v1/runtime"],
           "persistence": ["core-profile:sandbox-host-v1/persistence"],
-          "binding": ["repo:tests/test_experience_package.py::test_bindings_match_runtime_capabilities_and_are_device_scoped"],
-          "states": ["repo:tests/test_experience_package.py::test_sandbox_widget_has_accessible_responsive_loading_and_error_paths"],
-          "commands": ["repo:tests/test_experience_package.py::test_browser_helpers_cover_empty_snapshot_points_and_power_commands"],
-          "responsive": ["repo:tests/test_experience_package.py::test_sandbox_widget_has_accessible_responsive_loading_and_error_paths"],
-          "themes": ["repo:tests/test_experience_package.py::test_themes_are_bounded_and_core_typography_remains_authoritative"],
-          "accessibility": ["repo:tests/test_experience_package.py::test_sandbox_widget_has_accessible_responsive_loading_and_error_paths"],
+          "binding": ["repo:test/package.test.mjs"],
+          "states": ["repo:test/widget.test.mjs"],
+          "commands": ["repo:test/widget.test.mjs"],
+          "responsive": ["repo:src/widget.ts"],
+          "themes": ["repo:themes/kasa.css", "repo:themes/quiet.css"],
+          "accessibility": ["repo:src/widget.ts"],
           "save-reload": ["core-profile:sandbox-host-v1/save-reload"],
           "performance": ["core-profile:sandbox-host-v1/performance"]
         }
@@ -178,20 +169,21 @@
       "id": "environment-monitor",
       "name": "Kasa Environment",
       "description": "Comfortable, glanceable temperature and humidity readings from Kasa sensors and hubs.",
-      "runtime": "declarative",
+      "runtime": "sandboxed_bundle",
+      "entry": "assets/kasa-metrics-widget.mjs",
       "certification": {
         "schema_version": "1",
         "verified_gates": ["runtime", "persistence", "binding", "states", "responsive", "themes", "accessibility", "save-reload", "performance"],
         "evidence": {
-          "runtime": ["core-profile:declarative-v1/runtime"],
-          "persistence": ["core-profile:declarative-v1/persistence"],
-          "binding": ["repo:tests/test_experience_package.py::test_bindings_match_runtime_capabilities_and_are_device_scoped"],
-          "states": ["core-profile:declarative-v1/states"],
-          "responsive": ["core-profile:declarative-v1/responsive"],
-          "themes": ["core-profile:declarative-v1/themes"],
-          "accessibility": ["core-profile:declarative-v1/accessibility"],
-          "save-reload": ["core-profile:declarative-v1/save-reload"],
-          "performance": ["core-profile:declarative-v1/performance"]
+          "runtime": ["core-profile:sandbox-host-v1/runtime"],
+          "persistence": ["core-profile:sandbox-host-v1/persistence"],
+          "binding": ["repo:test/package.test.mjs"],
+          "states": ["repo:test/widget.test.mjs"],
+          "responsive": ["repo:src/metrics-widget.ts"],
+          "themes": ["repo:themes/kasa.css", "repo:themes/quiet.css"],
+          "accessibility": ["repo:src/metrics-widget.ts"],
+          "save-reload": ["core-profile:sandbox-host-v1/save-reload"],
+          "performance": ["core-profile:sandbox-host-v1/performance"]
         }
       },
       "themes": [
@@ -212,15 +204,6 @@
         {"id": "temperature", "label": "Temperature", "required": true, "binding_modes": ["read"], "value_kinds": ["numeric"], "capability_requirements": ["temperature"], "compatible_integration_ids": ["tp-link-kasa-local-api"], "data_delivery": {"mode": "stream_preferred", "stale_after_seconds": 120}},
         {"id": "humidity", "label": "Humidity", "required": false, "binding_modes": ["read"], "value_kinds": ["numeric"], "capability_requirements": ["humidity"], "compatible_integration_ids": ["tp-link-kasa-local-api"], "data_delivery": {"mode": "stream_preferred", "stale_after_seconds": 120}}
       ],
-      "recipe": {
-        "schema_version": "1",
-        "layout": "grid",
-        "columns": 2,
-        "items": [
-          {"type": "metric", "slot_id": "temperature", "label": "Temperature", "format": "number", "domain": "temperature", "emphasis": "hero", "show_freshness": true, "action": {"type": "details", "label": "View temperature history"}},
-          {"type": "metric", "slot_id": "humidity", "label": "Humidity", "format": "number", "domain": "humidity", "show_freshness": true, "action": {"type": "details", "label": "View humidity history"}}
-        ]
-      },
       "default_column_span": 4,
       "default_row_span": 3
     }

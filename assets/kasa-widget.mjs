@@ -1,44 +1,144 @@
-import { createOptimisticControl } from "./optimistic-control.mjs";
+// node_modules/piphi-network-widget-sdk/dist/client.js
+function getInjectedPiPhiWidgetHost(widgetWindow) {
+  const resolvedWindow = widgetWindow ?? (typeof window !== "undefined" ? window : void 0);
+  if (!resolvedWindow) {
+    throw new Error("The PiPhi Widget SDK requires a browser window.");
+  }
+  const host2 = resolvedWindow.PiPhiWidgetHost;
+  if (!host2) {
+    throw new Error("PiPhiWidgetHost is not available. Run this widget inside a PiPhi dashboard or create a client bridge.");
+  }
+  return host2;
+}
 
-const root = typeof document === "undefined" ? null : document.getElementById("piphi-widget-root");
-const host = typeof window === "undefined" ? null : window.PiPhiWidgetHost;
+// node_modules/piphi-network-widget-sdk/dist/optimistic-control.js
+function readingTime(raw) {
+  if (raw == null || raw === "")
+    return null;
+  const parsed = typeof raw === "number" ? raw : /^\d+$/.test(raw) ? Number(raw) : Date.parse(raw);
+  if (!Number.isFinite(parsed))
+    return null;
+  return parsed < 1e12 ? parsed * 1e3 : parsed;
+}
+function createOptimisticControl(options = {}) {
+  let confirmed = options.initial;
+  let override = null;
+  let lastReadingAt = 0;
+  let confirmationTimer = null;
+  const now = options.now ?? Date.now;
+  const equals = options.equals ?? Object.is;
+  const confirmationMs = Math.max(1, options.confirmationMs ?? 1e4);
+  const visible = () => override?.value ?? confirmed;
+  const notify = () => options.onChange?.(visible());
+  const clearTimer = () => {
+    if (confirmationTimer)
+      clearTimeout(confirmationTimer);
+    confirmationTimer = null;
+  };
+  return {
+    get value() {
+      return visible();
+    },
+    get confirmed() {
+      return confirmed;
+    },
+    get pending() {
+      return override?.pending ?? false;
+    },
+    get awaitingConfirmation() {
+      return override !== null && !override.pending;
+    },
+    begin(next) {
+      clearTimer();
+      override = { value: next, issuedAt: now(), pending: true };
+      notify();
+    },
+    accept() {
+      if (!override)
+        return;
+      override.pending = false;
+      const accepted = override;
+      clearTimer();
+      confirmationTimer = setTimeout(() => {
+        if (override !== accepted)
+          return;
+        override = null;
+        confirmationTimer = null;
+        notify();
+      }, confirmationMs);
+      notify();
+    },
+    reject() {
+      clearTimer();
+      override = null;
+      notify();
+    },
+    observe(value2, observedAt) {
+      const timestamp = readingTime(observedAt);
+      if (timestamp !== null && timestamp < lastReadingAt)
+        return;
+      if (timestamp === null && lastReadingAt > 0 && (!override || !equals(value2, override.value)))
+        return;
+      if (timestamp !== null)
+        lastReadingAt = timestamp;
+      confirmed = value2;
+      if (override && (equals(value2, override.value) || !override.pending && timestamp !== null && timestamp >= override.issuedAt)) {
+        override = null;
+        clearTimer();
+      }
+      notify();
+    },
+    reset(value2) {
+      clearTimer();
+      confirmed = value2;
+      override = null;
+      lastReadingAt = 0;
+      notify();
+    },
+    destroy() {
+      clearTimer();
+      override = null;
+    }
+  };
+}
 
-const state = {
+// src/widget.ts
+var root = typeof document === "undefined" ? null : document.getElementById("piphi-widget-root");
+var host = typeof window === "undefined" ? null : getInjectedPiPhiWidgetHost(window);
+var state = {
   bootstrap: null,
-  values: new Map(),
+  values: /* @__PURE__ */ new Map(),
   error: "",
   errorSource: "",
   pending: "",
   subscriptions: [],
   bindingScope: "",
   ready: false,
-  brightnessEditing: false,
+  brightnessEditing: false
 };
-
-const powerControl = createOptimisticControl({
-  onChange: () => { if (!state.brightnessEditing) render(); },
+var powerControl = createOptimisticControl({
+  onChange: () => {
+    if (!state.brightnessEditing) render();
+  }
 });
-const brightnessControl = createOptimisticControl({
-  onChange: () => { if (!state.brightnessEditing) render(); },
+var brightnessControl = createOptimisticControl({
+  onChange: () => {
+    if (!state.brightnessEditing) render();
+  }
 });
-
-export function normalizeBoolean(value) {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  const normalized = String(value ?? "").trim().toLowerCase();
+function normalizeBoolean(value2) {
+  if (typeof value2 === "boolean") return value2;
+  if (typeof value2 === "number") return value2 !== 0;
+  const normalized = String(value2 ?? "").trim().toLowerCase();
   return ["1", "true", "on", "yes", "active"].includes(normalized);
 }
-
-export function formatReading(value, unit, maximumFractionDigits = 2) {
-  if (value === null || value === undefined || value === "") return "—";
-  const numeric = Number(value);
-  const display = Number.isFinite(numeric)
-    ? new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(numeric)
-    : String(value);
+function formatReading(value2, unit, maximumFractionDigits = 2) {
+  if (value2 === null || value2 === void 0 || value2 === "") return "\u2014";
+  const numeric = Number(value2);
+  const display = Number.isFinite(numeric) ? new Intl.NumberFormat(void 0, { maximumFractionDigits }).format(numeric) : String(value2);
   return unit ? `${display} ${unit}` : display;
 }
-
-export function statesFromEvent(event) {
+function statesFromEvent(event) {
   if (event?.kind === "snapshot") return Array.isArray(event.data?.states) ? event.data.states : [];
   if (event?.kind === "point" && event.data) {
     return [{
@@ -47,50 +147,37 @@ export function statesFromEvent(event) {
       display_value: event.data.displayValue ?? event.data.display_value,
       unit: event.data.unit,
       collected_at: event.data.ts ?? event.data.collected_at,
-      found: true,
+      found: true
     }];
   }
   return [];
 }
-
-export function commandForPower(value) {
-  return normalizeBoolean(value) ? "turn_off" : "turn_on";
+function commandForPower(value2) {
+  return normalizeBoolean(value2) ? "turn_off" : "turn_on";
 }
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+function escapeHtml(value2) {
+  return String(value2 ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
-
 function widgetMode() {
   const id = String(state.bootstrap?.package?.id ?? "");
   return id.endsWith("/smart-plug") ? "smart-plug" : "device-control";
 }
-
-export function cardTargetForMode(mode) {
+function cardTargetForMode(mode) {
   return mode === "smart-plug" ? "smart-plug-card" : "device-card";
 }
-
-export async function activateTarget(targetId, widgetHost = host) {
-  if (!widgetHost?.activateInteraction) return undefined;
+async function activateTarget(targetId, widgetHost = host) {
+  if (!widgetHost?.activateInteraction) return void 0;
   return widgetHost.activateInteraction(targetId);
 }
-
 function setting(name, fallback = true) {
-  const value = state.bootstrap?.settings?.[name];
-  return typeof value === "boolean" ? value : fallback;
+  const value2 = state.bootstrap?.settings?.[name];
+  return typeof value2 === "boolean" ? value2 : fallback;
 }
-
 function contentHeight() {
   const content = root?.querySelector(".kasa");
   const minimum = widgetMode() === "device-control" ? 128 : 180;
   return Math.max(minimum, content?.scrollHeight ?? root?.scrollHeight ?? minimum);
 }
-
 function updateValues(event) {
   for (const item of statesFromEvent(event)) {
     const id = String(item.capability_id ?? item.capabilityId ?? "").trim();
@@ -98,7 +185,7 @@ function updateValues(event) {
     state.values.set(id, {
       value: item.value,
       display: item.display_value ?? item.displayValue,
-      unit: item.unit,
+      unit: item.unit
     });
     const observedAt = item.collected_at ?? item.received_at;
     if (id === "switch") powerControl.observe(normalizeBoolean(item.value), observedAt);
@@ -107,16 +194,13 @@ function updateValues(event) {
     }
   }
 }
-
 function value(id) {
   return state.values.get(id)?.value;
 }
-
 function reading(id, fallbackUnit) {
   const item = state.values.get(id);
   return formatReading(item?.display ?? item?.value, item?.unit ?? fallbackUnit);
 }
-
 function styles() {
   return `<style>
     .kasa { display: grid; align-content: start; min-height: 0; gap: var(--piphi-experience-gap, 10px); padding: 2px; color: var(--piphi-widget-text, #172033); }
@@ -155,14 +239,12 @@ function styles() {
     @media (prefers-reduced-motion: reduce) { .kasa__power { transition: none; } }
   </style>`;
 }
-
 function energyTile(id, label, unit, targetId, accent = false) {
   return `<button class="kasa__tile" type="button" data-target="${targetId}">
     <span class="kasa__metric-label">${label}</span>
     <strong class="kasa__metric-value${accent ? " kasa__metric-value--energy" : ""}">${reading(id, unit)}</strong>
   </button>`;
 }
-
 function render() {
   if (!root) return;
   const mode = widgetMode();
@@ -170,13 +252,11 @@ function render() {
   const isOn = powerControl.value ?? normalizeBoolean(value("switch"));
   const brightness = brightnessControl.value ?? Number(value("brightness"));
   const showBrightness = mode === "device-control" && Number.isFinite(brightness);
-  const energy = mode === "smart-plug"
-    ? `<p class="kasa__section-title">Energy use</p><div class="kasa__metrics">
+  const energy = mode === "smart-plug" ? `<p class="kasa__section-title">Energy use</p><div class="kasa__metrics">
         ${energyTile("energy_power", "Right now", "W", "smart-plug-energy", true)}
         ${setting("show_today") ? energyTile("energy_today", "Today", "kWh", "smart-plug-energy") : ""}
         ${setting("show_month") ? energyTile("energy_this_month", "This month", "kWh", "smart-plug-energy") : ""}
-      </div>`
-    : "";
+      </div>` : "";
   root.innerHTML = `${styles()}<section class="kasa" aria-label="Kasa ${mode === "smart-plug" ? "smart plug" : "device control"}">
     <div class="kasa__hero" data-active="${isOn}">
       <div class="kasa__hero-main">
@@ -188,7 +268,6 @@ function render() {
     ${energy}
     ${state.error ? `<p class="kasa__message" role="alert">${escapeHtml(state.error)}</p>` : ""}
   </section>`;
-
   root.querySelector(".kasa__power")?.addEventListener("click", () => runCommand(commandForPower(isOn), {}, "power", powerControl, !isOn));
   root.querySelector("#brightness")?.addEventListener("input", (event) => {
     state.brightnessEditing = true;
@@ -196,8 +275,8 @@ function render() {
   });
   root.querySelector("#brightness")?.addEventListener("change", (event) => {
     state.brightnessEditing = false;
-    const brightness = Number(event.currentTarget.value);
-    void runCommand("set_brightness", { brightness }, "brightness", brightnessControl, brightness);
+    const brightness2 = Number(event.currentTarget.value);
+    void runCommand("set_brightness", { brightness: brightness2 }, "brightness", brightnessControl, brightness2);
   });
   root.querySelectorAll("[data-target]").forEach((element) => element.addEventListener("click", () => {
     void activateTarget(element.dataset.target).catch((error) => {
@@ -209,7 +288,6 @@ function render() {
     queueMicrotask(() => void host?.setHeight(contentHeight()));
   }
 }
-
 async function runCommand(commandName, args = {}, slotId = "power", control = null, target) {
   if (!host || state.pending) return;
   state.pending = commandName;
@@ -229,7 +307,6 @@ async function runCommand(commandName, args = {}, slotId = "power", control = nu
     render();
   }
 }
-
 async function connect(bootstrap) {
   state.bootstrap = bootstrap;
   render();
@@ -238,12 +315,13 @@ async function connect(bootstrap) {
     state.ready = true;
   }
   const bindings = Array.isArray(bootstrap?.bindings) ? bootstrap.bindings : [];
-  const bindingScope = bindings
-    .map((slot) => [slot.id, slot.binding?.configId, slot.binding?.deviceKey, slot.binding?.capabilityId].join(":"))
-    .join("|");
+  const bindingScope = bindings.map((slot) => [slot.id, slot.binding?.configId, slot.binding?.deviceKey, slot.binding?.capabilityId].join(":")).join("|");
   if (state.bindingScope === bindingScope && state.subscriptions.length) return;
   for (const unsubscribe of state.subscriptions.splice(0)) {
-    try { await unsubscribe(); } catch { /* The host may already have released it. */ }
+    try {
+      await unsubscribe();
+    } catch {
+    }
   }
   state.bindingScope = bindingScope;
   state.error = "";
@@ -277,7 +355,14 @@ async function connect(bootstrap) {
     }
   }
 }
-
 if (root && host) {
   host.subscribe((bootstrap) => void connect(bootstrap));
 }
+export {
+  activateTarget,
+  cardTargetForMode,
+  commandForPower,
+  formatReading,
+  normalizeBoolean,
+  statesFromEvent
+};

@@ -35,9 +35,6 @@ def _archive(source: dict) -> bytes:
         for widget in source["widgets"]
         for theme in widget.get("themes", [])
     )
-    helper = ROOT / "assets" / "optimistic-control.mjs"
-    if helper.is_file():
-        assets.add("assets/optimistic-control.mjs")
     output = io.BytesIO()
     with ZipFile(output, "w") as package:
         _write_member(
@@ -131,4 +128,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
