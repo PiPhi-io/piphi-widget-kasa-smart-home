@@ -3,7 +3,7 @@
   "identity": {
     "publisher_id": "io.piphi",
     "package_id": "kasa-smart-home",
-    "version": "0.1.16"
+    "version": "0.1.17"
   },
   "name": "Kasa Smart Home",
   "description": "Responsive controls, environmental readings, and energy insights for TP-Link Kasa devices.",
