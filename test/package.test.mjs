@@ -10,7 +10,7 @@ test("package identity and integration linkage are stable", () => {
   assert.deepEqual(source.identity, {
     publisher_id: "io.piphi",
     package_id: "kasa-smart-home",
-    version: "0.1.16",
+    version: "0.1.17",
   });
   assert.equal(source.owning_integration_id, "tp-link-kasa-local-api");
   assert.deepEqual(source.recommended_for_integrations, ["tp-link-kasa-local-api"]);
